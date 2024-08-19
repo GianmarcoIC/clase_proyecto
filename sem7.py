@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from supabase import create_client, Client
 
 # Configurar Supabase
@@ -31,11 +32,19 @@ choice = st.sidebar.selectbox("Menú", menu)
 
 if choice == "Ver":
     st.subheader("Lista de estudiantes")
+    
+    # Obtener los datos de los estudiantes
     students = get_students()
     student_count = count_students()
+    
+    # Mostrar la cantidad total de estudiantes
     st.write(f"Cantidad total de estudiantes: {student_count}")
-    for student in students:
-        st.write(f"ID: {student['id']}, Nombre: {student['name']} | Edad: {student['age']}")
+    
+    # Convertir la lista de estudiantes en un DataFrame de pandas
+    df_students = pd.DataFrame(students)
+    
+    # Mostrar el DataFrame en una tabla
+    st.dataframe(df_students[['id', 'name', 'age']])
 
 elif choice == "Agregar":
     st.subheader("Agregar Estudiante")
