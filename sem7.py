@@ -25,7 +25,7 @@ def update_student(student_id, name, age):
 def delete_student(student_id):
     supabase.table('students').delete().eq("id", student_id).execute()
 
-st.title("CRUD con Streamlit y Supabase")
+st.title("CRUD Python - Instituto Continental IDL3")
 
 menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
 choice = st.sidebar.selectbox("Menú", menu)
@@ -43,8 +43,14 @@ if choice == "Ver":
     # Convertir la lista de estudiantes en un DataFrame de pandas
     df_students = pd.DataFrame(students)
     
+    # Añadir numeración personalizada
+    df_students['#'] = (df_students.index // 5 + 1).astype(int)
+    
+    # Reorganizar las columnas para que la numeración esté al principio
+    df_students = df_students[['#', 'id', 'name', 'age']]
+    
     # Mostrar el DataFrame en una tabla
-    st.dataframe(df_students[['id', 'name', 'age']])
+    st.dataframe(df_students)
 
 elif choice == "Agregar":
     st.subheader("Agregar Estudiante")
