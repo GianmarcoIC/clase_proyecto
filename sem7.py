@@ -35,7 +35,7 @@ if choice == "Ver":
     student_count = count_students()
     st.write(f"Cantidad total de estudiantes: {student_count}")
     for student in students:
-        st.write(f"ID: {student['id']}, Nombre: {student['name']}, Edad: {student['age']}")
+        st.write(f"ID: {student['id']}, Nombre: {student['name']} | Edad: {student['age']}")
 
 elif choice == "Agregar":
     st.subheader("Agregar Estudiante")
