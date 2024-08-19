@@ -6,13 +6,12 @@ SUPABASE_URL = "https://xhnskoldrpeslxhbyami.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaW9xd3ZseHJndWpvdGN1YXp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQwMzM0MDUsImV4cCI6MjAzOTYwOTQwNX0.fLmClBVIcVGr_iKYTw79kPJUb12Iem7beooWfesNiXE"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Funciones CRUD
 def get_students():
     response = supabase.table('students').select('*').execute()
     return response.data
 
 def count_students():
-    response = supabase.table('students').select('*', count='exact').execute()
+    response = supabase.table('students').select(count='exact').execute()
     return response.count
 
 def add_student(name, age):
@@ -28,18 +27,15 @@ def delete_student(student_id):
 st.title("CRUD con Streamlit y Supabase")
 
 menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
-choice = st.sidebar.selectbox("Menú", menu)
+choice = st.sidebar.selectbox("Menu", menu)
 
 if choice == "Ver":
     st.subheader("Lista de estudiantes")
     students = get_students()
     student_count = count_students()
     st.write(f"Cantidad total de estudiantes: {student_count}")
-    if students:  # Verifica si hay estudiantes en la lista
-        for student in students:
-            st.write(f"ID: {student['id']}, Nombre: {student['name']}, Edad: {student['age']}")
-    else:
-        st.write("No hay estudiantes en la base de datos.")
+    for student in students:
+        st.write(f"ID: {student['id']}, Nombre: {student['name']}, Edad: {student['age']}")
 
 elif choice == "Agregar":
     st.subheader("Agregar Estudiante")
