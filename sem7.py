@@ -35,8 +35,11 @@ if choice == "Ver":
     students = get_students()
     student_count = count_students()
     st.write(f"Cantidad total de estudiantes: {student_count}")
-    for student in students:
-        st.write(f"ID: {student['id']}, Nombre: {student['name']}, Edad: {student['age']}")
+    if students:  # Verifica si hay estudiantes en la lista
+        for student in students:
+            st.write(f"ID: {student['id']}, Nombre: {student['name']}, Edad: {student['age']}")
+    else:
+        st.write("No hay estudiantes en la base de datos.")
 
 elif choice == "Agregar":
     st.subheader("Agregar Estudiante")
