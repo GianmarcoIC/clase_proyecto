@@ -25,6 +25,7 @@ def update_student(student_id, name, age):
 def delete_student(student_id):
     supabase.table('students').delete().eq("id", student_id).execute()
 
+st.image("log_ic-removebg-preview.png", width=200)
 st.title("CRUD Python - Instituto Continental IDL3")
 
 menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
