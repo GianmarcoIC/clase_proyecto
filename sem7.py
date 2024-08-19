@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
+import streamlit as st
 
 # Configurar Supabase
 SUPABASE_URL = "https://peioqwvlxrgujotcuazt.supabase.co"
@@ -27,10 +28,41 @@ def delete_student(student_id):
 
 st.image("log_ic-removebg-preview.png", width=200)
 st.title("CRUD Python - Instituto Continental IDL3")
+# Aplicar CSS para personalizar el menú
+st.markdown(
+    """
+    <style>
+    .css-1d391kg {
+        background-color: red;  /* Cambia el color de fondo del menú de la barra lateral */
+    }
+    .css-1d391kg .css-1wa3eu0 {
+        color: white;  /* Cambia el color del texto del menú */
+    }
+    .css-1d391kg .css-1n7v3b2 {
+        color: white;  /* Cambia el color del texto del menú cuando está seleccionado */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
+# Definir el menú
 menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
 choice = st.sidebar.selectbox("Menú", menu)
 
+# Tu código para manejar la elección del menú aquí
+if choice == "Ver":
+    st.subheader("Ver")
+    # Tu código para la opción "Ver"
+elif choice == "Agregar":
+    st.subheader("Agregar")
+    # Tu código para la opción "Agregar"
+elif choice == "Actualizar":
+    st.subheader("Actualizar")
+    # Tu código para la opción "Actualizar"
+elif choice == "Eliminar":
+    st.subheader("Eliminar")
+    # Tu código para la opción "Eliminar"
 
 def paginate_dataframe(df, page_size):
     """Divide el DataFrame en páginas de un tamaño dado."""
