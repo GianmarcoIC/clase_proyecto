@@ -23,7 +23,7 @@ def update_student(student_id, name, age):
 def delete_student(student_id):
     supabase.table('students').delete().eq("id", student_id).execute()
 
-st.title("CRUD con Streamlit y Supabase")
+st.title("Proyecto CRUD IDL 3")
 
 menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
 choice = st.sidebar.selectbox("Menú", menu)
