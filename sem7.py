@@ -2,7 +2,7 @@ import streamlit as st
 from supabase import create_client, Client
 
 # Configurar Supabase
-SUPABASE_URL = "https://xhnskoldrpeslxhbyami.supabase.co"
+SUPABASE_URL = "https://peioqwvlxrgujotcuazt.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaW9xd3ZseHJndWpvdGN1YXp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQwMzM0MDUsImV4cCI6MjAzOTYwOTQwNX0.fLmClBVIcVGr_iKYTw79kPJUb12Iem7beooWfesNiXE"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
