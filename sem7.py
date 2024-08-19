@@ -30,6 +30,15 @@ st.title("CRUD Python - Instituto Continental IDL3")
 menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
 choice = st.sidebar.selectbox("Menú", menu)
 
+
+def paginate_dataframe(df, page_size):
+    """Divide el DataFrame en páginas de un tamaño dado."""
+    num_pages = (len(df) + page_size - 1) // page_size
+    for page in range(num_pages):
+        start_idx = page * page_size
+        end_idx = min((page + 1) * page_size, len(df))
+        yield df.iloc[start_idx:end_idx]
+
 if choice == "Ver":
     st.subheader("Lista de estudiantes")
     
@@ -43,14 +52,23 @@ if choice == "Ver":
     # Convertir la lista de estudiantes en un DataFrame de pandas
     df_students = pd.DataFrame(students)
     
-    # Añadir numeración personalizada
-    df_students['#'] = (df_students.index // 5 + 1).astype(int)
+    # Tamaño de página
+    page_size = 5
     
-    # Reorganizar las columnas para que la numeración esté al principio
-    df_students = df_students[['#', 'id', 'name', 'age']]
+    # Crear la numeración personalizada
+    df_students['#'] = df_students.index + 1
     
-    # Mostrar el DataFrame en una tabla
-    st.dataframe(df_students)
+    # Calcular número de páginas
+    num_pages = (len(df_students) + page_size - 1) // page_size
+    
+    # Selección de página
+    page_number = st.number_input("Selecciona la página:", min_value=1, max_value=num_pages, value=1)
+    
+    # Mostrar la página seleccionada
+    for page_df in paginate_dataframe(df_students, page_size):
+        if page_number == (df_students.index[page_df.index[-1]] // page_size + 1):
+            st.dataframe(page_df[['#', 'id', 'name', 'age']])
+            st.write(f"Página {page_number} de {num_pages}")
 
 elif choice == "Agregar":
     st.subheader("Agregar Estudiante")
