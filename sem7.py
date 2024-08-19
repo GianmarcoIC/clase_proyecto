@@ -3,21 +3,27 @@ from supabase import create_client
 
 #Configurar Supabase
 SUPABASE_URL = "https://xhnskoldrpeslxhbyami.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhobnNrb2xkcnBlc2x4aGJ5YW1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQwMzA1NDUsImV4cCI6MjAzOTYwNjU0NX0.yhv4xvz5AvNKNmkMGK0xOXozVbfn6XlRCwr9TFZUxnw"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlaW9xd3ZseHJndWpvdGN1YXp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQwMzM0MDUsImV4cCI6MjAzOTYwOTQwNX0.fLmClBVIcVGr_iKYTw79kPJUb12Iem7beooWfesNiXE"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Funciones CRUD
 def get_students():
+response= supabase.table('students').select('*').execute()
+return response.data
     response = supabase.table('students').select('*').execute()
     return response.data
 
 def count_students():
+response = supabase.table('students').select('*', 'count="exact').execute()
+return response.count
     response = supabase.table('students').select('*', count='exact').execute()
     return response.count
 
 def add_student(name, age):
     supabase.table('students').insert({"name": name, "age": age}).execute()
 
+def add_student (name, age):
+supabase.table('students').insert({"name": name, "age": age}).execute()
 def update_student(student_id, name, age):
     supabase.table('students').update({"name": name, "age": age}).eq("id", student_id).execute()
 
@@ -27,6 +33,7 @@ def delete_student(student_id):
 # Interfaz de usuario con Streamlit
 st.title("CRUD con Streamlit y Supabase")
 
+menu = ["Ver", "Agregar"]
 menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
 choice = st.sidebar.selectbox("Menu", menu)
 
