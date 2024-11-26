@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
-import streamlit as st
+from dotenv import load_dotenv  # Importar dotenv
+import os
 
 # Cargar variables de entorno
-load_dotenv()
-SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
-
+load_dotenv()  # Asegurar que se carguen las variables desde el archivo .env
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://msjtvyvvcsnmoblkpjbz.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k")
 
 # Crear cliente de Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -31,6 +31,9 @@ def count_students():
 
 def add_student(name, age, ciclo, carrera, correo, telefono):
     try:
+        if not (name and correo and telefono):  # Validación básica
+            st.error("Todos los campos obligatorios deben estar llenos.")
+            return
         supabase.table('estudiante').insert({
             "nombres": name, 
             "edad": age, 
@@ -45,6 +48,9 @@ def add_student(name, age, ciclo, carrera, correo, telefono):
 
 def update_student(student_id, name, age, ciclo, carrera, correo, telefono):
     try:
+        if not student_id:
+            st.error("ID del estudiante es obligatorio.")
+            return
         supabase.table('estudiante').update({
             "nombres": name,
             "edad": age,
@@ -59,6 +65,9 @@ def update_student(student_id, name, age, ciclo, carrera, correo, telefono):
 
 def delete_student(student_id):
     try:
+        if not student_id:
+            st.error("ID del estudiante es obligatorio.")
+            return
         supabase.table('estudiante').delete().eq("id", student_id).execute()
         st.success("Estudiante eliminado exitosamente")
     except Exception as e:
@@ -105,7 +114,7 @@ elif choice == "Agregar":
     carrera = st.text_input("Carrera")
     correo = st.text_input("Correo")
     telefono = st.text_input("Teléfono")
-    if st.button("Agregar") and name and correo and telefono:
+    if st.button("Agregar"):
         add_student(name, age, ciclo, carrera, correo, telefono)
 
 elif choice == "Actualizar":
@@ -117,11 +126,11 @@ elif choice == "Actualizar":
     carrera = st.text_input("Nueva Carrera")
     correo = st.text_input("Nuevo Correo")
     telefono = st.text_input("Nuevo Teléfono")
-    if st.button("Actualizar") and student_id:
+    if st.button("Actualizar"):
         update_student(student_id, name, age, ciclo, carrera, correo, telefono)
 
 elif choice == "Eliminar":
     st.subheader("Eliminar Estudiante")
     student_id = st.number_input("ID del estudiante", min_value=1)
-    if st.button("Eliminar") and student_id:
+    if st.button("Eliminar"):
         delete_student(student_id)
