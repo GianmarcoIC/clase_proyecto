@@ -1,106 +1,67 @@
 import streamlit as st
 import pandas as pd
-from supabase import create_client, Client
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPRegressor
+from sklearn.metrics import mean_squared_error
+import numpy as np
 
-# Configurar Supabase
-SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
+# Simular la conexión a la base de datos
+def load_data():
+    estudiantes = pd.DataFrame([
+        [1, 'Juan', 'Pérez', 21, 'VII', 'Ingeniería Informática', 'juan.perez@example.com', '123456789'],
+        [2, 'María', 'López', 22, 'VIII', 'Biología', 'maria.lopez@example.com', '987654321'],
+        [3, 'Carlos', 'García', 23, 'VI', 'Matemáticas', 'carlos.garcia@example.com', '564738291'],
+        [4, 'Ana', 'Torres', 20, 'V', 'Física', 'ana.torres@example.com', '567123456'],
+        [5, 'Luis', 'Martínez', 24, 'IX', 'Química', 'luis.martinez@example.com', '789012345']
+    ], columns=['id', 'Nombres', 'Apellidos', 'edad', 'ciclo', 'carrera', 'correo', 'telefono'])
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    articulos = pd.DataFrame([
+        [1, 'Estudio de la inteligencia artificial', '2024-03-15', 2024, '10.1000/xyz123', 1, 1, 1],
+        [2, 'Impacto ambiental en zonas urbanas', '2023-11-10', 2023, '10.2000/abc456', 2, 2, 2],
+        [3, 'Modelado matemático en biología', '2023-07-08', 2023, '10.3000/def789', 3, 3, 3],
+        [4, 'Energía renovable y su crecimiento', '2024-01-05', 2024, '10.4000/ghi101', 4, 4, 4],
+        [5, 'Avances en nanotecnología', '2023-05-20', 2023, '10.5000/jkl112', 5, 5, 5]
+    ], columns=['id', 'titulo_articulo', 'fecha_publicacion', 'anio_publicacion', 'doi', 'estudiante_id', 'institucion_id', 'indizacion_id'])
 
-# Funciones CRUD
-def get_students():
-    response = supabase.table('estudiante').select('*').execute()
-    return response.data
+    return estudiantes, articulos
 
-def count_students():
-    response = supabase.table('estudiante').select('*', count='exact').execute()
-    return response.count
+# Cargar los datos
+estudiantes, articulos = load_data()
 
-def add_student(name, age, ciclo, carrera, correo, telefono):
-    supabase.table('estudiante').insert({
-        "nombres": name,
-        "edad": age,
-        "ciclo": ciclo,
-        "carrera": carrera,
-        "correo": correo,
-        "telefono": telefono
-    }).execute()
+# Preprocesamiento
+articulos['fecha_publicacion'] = pd.to_datetime(articulos['fecha_publicacion'])
+articulos_por_estudiante = articulos.groupby(['estudiante_id', 'anio_publicacion']).size().reset_index(name='articulos_publicados')
 
-def update_student(student_id, name, age, ciclo, carrera, correo, telefono):
-    supabase.table('estudiante').update({
-        "nombres": name,
-        "edad": age,
-        "ciclo": ciclo,
-        "carrera": carrera,
-        "correo": correo,
-        "telefono": telefono
-    }).eq("id", student_id).execute()
+# Crear dataset para el modelo
+articulos_por_estudiante['articulos_previos'] = articulos_por_estudiante.groupby('estudiante_id')['articulos_publicados'].shift(1).fillna(0)
+X = articulos_por_estudiante[['articulos_previos']]
+y = articulos_por_estudiante['articulos_publicados']
 
-def delete_student(student_id):
-    supabase.table('estudiante').delete().eq("id", student_id).execute()
+# Entrenar modelo
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+model = MLPRegressor(hidden_layer_sizes=(32, 16), max_iter=500, random_state=42)
+model.fit(X_train, y_train)
 
-def paginate_dataframe(df, page_size):
-    """Divide el DataFrame en páginas de un tamaño dado."""
-    num_pages = (len(df) + page_size - 1) // page_size
-    for page in range(num_pages):
-        start_idx = page * page_size
-        end_idx = min((page + 1) * page_size, len(df))
-        yield df.iloc[start_idx:end_idx]
+# Predicción y error
+predictions = model.predict(X_test)
+mse = mean_squared_error(y_test, predictions)
 
-# Interfaz Streamlit
-st.image("log_ic-removebg-preview.png", width=200)
-st.title("CRUD Python - Instituto Continental IDL3")
+# Predicción por carrera
+articulos_por_carrera = articulos.merge(estudiantes[['id', 'carrera']], left_on='estudiante_id', right_on='id')
+articulos_por_carrera = articulos_por_carrera.groupby('carrera').size().reset_index(name='articulos_total')
+articulos_por_carrera['articulos_previos'] = articulos_por_carrera['articulos_total']
+articulos_por_carrera['prediccion'] = model.predict(articulos_por_carrera[['articulos_previos']])
 
-menu = ["Ver", "Agregar", "Actualizar", "Eliminar"]
-choice = st.sidebar.selectbox("Menú", menu)
+# Visualización en Streamlit
+st.title("Modelo Predictivo de Artículos Publicados")
+st.write(f"Error cuadrático medio del modelo: {mse:.2f}")
 
-if choice == "Ver":
-    st.subheader("Lista de estudiantes")
-    students = get_students()
-    student_count = count_students()
-    st.write(f"Cantidad total de estudiantes: {student_count}")
-    df_students = pd.DataFrame(students)
-    if not df_students.empty:
-        page_size = 5
-        df_students['#'] = df_students.index + 1
-        num_pages = (len(df_students) + page_size - 1) // page_size
-        page_number = st.number_input("Selecciona la página:", min_value=1, max_value=num_pages, value=1)
-        for page_df in paginate_dataframe(df_students, page_size):
-            if page_number == (df_students.index[page_df.index[-1]] // page_size + 1):
-                st.dataframe(page_df[['#', 'id', 'nombres', 'edad', 'ciclo', 'carrera', 'correo', 'telefono']])
-                break
-    else:
-        st.info("No hay estudiantes registrados")
-
-elif choice == "Agregar":
-    st.subheader("Agregar Estudiante")
-    name = st.text_input("Nombre")
-    age = st.number_input("Edad", min_value=1, max_value=100)
-    ciclo = st.text_input("Ciclo")
-    carrera = st.text_input("Carrera")
-    correo = st.text_input("Correo")
-    telefono = st.text_input("Teléfono")
-    if st.button("Agregar") and name and correo and telefono:
-        add_student(name, age, ciclo, carrera, correo, telefono)
-        st.success("Estudiante agregado exitosamente")
-
-elif choice == "Actualizar":
-    st.subheader("Actualizar Estudiante")
-    student_id = st.number_input("ID del estudiante", min_value=1)
-    name = st.text_input("Nuevo Nombre")
-    age = st.number_input("Nueva Edad", min_value=1, max_value=100)
-    ciclo = st.text_input("Nuevo Ciclo")
-    carrera = st.text_input("Nueva Carrera")
-    correo = st.text_input("Nuevo Correo")
-    telefono = st.text_input("Nuevo Teléfono")
-    if st.button("Actualizar") and student_id:
-        update_student(student_id, name, age, ciclo, carrera, correo, telefono)
-        st.success("Estudiante actualizado exitosamente")
-
-elif choice == "Eliminar":
-    st.subheader("Eliminar Estudiante")
-    student_id = st.number_input("ID del estudiante", min_value=1)
-    if st.button("Eliminar") and student_id:
-        delete_student(student_id)
-        st.success("Estudiante eliminado exitosamente")
+st.subheader("Predicción de Artículos por Carrera")
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.bar(articulos_por_carrera['carrera'], articulos_por_carrera['prediccion'], color='skyblue')
+ax.set_xlabel("Carrera Profesional")
+ax.set_ylabel("Artículos Predichos")
+ax.set_title("Predicción de Publicación de Artículos por Carrera")
+plt.xticks(rotation=45)
+st.pyplot(fig)
