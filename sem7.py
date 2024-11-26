@@ -19,20 +19,20 @@ except Exception as e:
 def get_articulos():
     """Obtiene todos los artículos desde la base de datos."""
     try:
-        response = supabase.table("Articulo").select("*").execute()
+        response = supabase.table("articulo").select("*").execute()
         if response.status_code == 200 and response.data:
             return pd.DataFrame(response.data)
         else:
-            st.error("No se encontraron datos en la tabla Articulo o el usuario no tiene permisos adecuados.")
+            st.error("No se encontraron datos en la tabla articulo o el usuario no tiene permisos adecuados.")
             return pd.DataFrame()
     except Exception as e:
-        st.error(f"Error al consultar la tabla Articulo: {e}")
+        st.error(f"Error al consultar la tabla articulo: {e}")
         return pd.DataFrame()
 
 def get_estudiantes():
     """Obtiene todos los estudiantes desde la base de datos."""
     try:
-        response = supabase.table("Estudiante").select("*").execute()
+        response = supabase.table("estudiante").select("*").execute()
         if response.status_code == 200 and response.data:
             return pd.DataFrame(response.data)
         else:
