@@ -125,24 +125,24 @@ else:
     except ValueError as e:
         st.error(f"Error al generar el gráfico: {e}")
 
-    # Graficar la red neuronal
+    # Graficar la red neuronal con valores
     try:
-        st.subheader("Visualización de Red Neuronal")
+        st.subheader("Visualización de Red Neuronal con Valores")
 
         nn_graph = Digraph(format="png")
         nn_graph.attr(rankdir="LR")
 
-        # Capas de entrada
-        nn_graph.node("Input", "Año Normalizado", shape="circle", style="filled", color="lightblue")
+        # Capas de entrada con valores
+        nn_graph.node("Input", f"Entrada\n{X_train.iloc[0, 0]:.2f}", shape="circle", style="filled", color="lightblue")
 
         # Capas ocultas (ejemplo con 2 capas y 10 neuronas cada una)
         for i in range(1, 11):
-            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}", shape="circle", style="filled", color="lightgreen")
+            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}\nValor", shape="circle", style="filled", color="lightgreen")
         for i in range(1, 11):
-            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}", shape="circle", style="filled", color="lightgreen")
+            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}\nValor", shape="circle", style="filled", color="lightgreen")
 
-        # Capa de salida
-        nn_graph.node("Output", "Predicción", shape="circle", style="filled", color="orange")
+        # Capa de salida con valor
+        nn_graph.node("Output", f"Predicción\n{y_pred_test[0][0]:.2f}", shape="circle", style="filled", color="orange")
 
         # Conexiones
         for i in range(1, 11):
