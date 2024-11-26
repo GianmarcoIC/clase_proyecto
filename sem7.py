@@ -14,7 +14,7 @@ SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("CRUD y Modelo Predictivo con Red Neuronal")
+st.title("CRUD y Modelo Predictivo Mejorado")
 
 # Crear cliente Supabase
 try:
@@ -35,80 +35,70 @@ def get_table_data(table_name):
         st.error(f"Error al consultar la tabla {table_name}: {e}")
         return pd.DataFrame()
 
-# Función para insertar datos en una tabla
-def insert_data(table_name, data):
-    try:
-        response = supabase.table(table_name).insert(data).execute()
-        if response.error:
-            st.error(f"Error al insertar datos en {table_name}: {response.error}")
-        else:
-            st.success(f"Datos insertados correctamente en {table_name}.")
-    except Exception as e:
-        st.error(f"Error al insertar datos: {e}")
-
-# Función para actualizar datos en una tabla
-def update_data(table_name, id_value, data):
-    try:
-        response = supabase.table(table_name).update(data).eq("id", id_value).execute()
-        if response.error:
-            st.error(f"Error al actualizar datos en {table_name}: {response.error}")
-        else:
-            st.success(f"Datos actualizados correctamente en {table_name}.")
-    except Exception as e:
-        st.error(f"Error al actualizar datos: {e}")
-
-# Función para eliminar datos de una tabla
-def delete_data(table_name, id_value):
-    try:
-        response = supabase.table(table_name).delete().eq("id", id_value).execute()
-        if response.error:
-            st.error(f"Error al eliminar datos en {table_name}: {response.error}")
-        else:
-            st.success(f"Datos eliminados correctamente de {table_name}.")
-    except Exception as e:
-        st.error(f"Error al eliminar datos: {e}")
-
-# CRUD para cada tabla
-st.sidebar.title("Operaciones CRUD")
-crud_options = st.sidebar.selectbox("Selecciona una tabla para realizar CRUD", ["articulo", "estudiante", "institucion", "indizacion"])
-
-# Leer y mostrar datos
-data = get_table_data(crud_options)
-st.write(f"Datos actuales en la tabla `{crud_options}`:")
-st.dataframe(data)
-
-# Opciones de CRUD
-crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
-
-if crud_action == "Crear":
-    st.sidebar.write("Inserta nuevos datos:")
-    new_data = st.sidebar.text_area("Datos en formato JSON")
+# Funciones CRUD
+def insert_row(table_name, fields):
+    data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields}
     if st.sidebar.button("Insertar"):
         try:
-            insert_data(crud_options, eval(new_data))  # Convertir texto en diccionario
+            insert_data(table_name, [data])
         except Exception as e:
-            st.error(f"Error en los datos proporcionados: {e}")
+            st.error(f"Error al insertar datos: {e}")
 
-elif crud_action == "Actualizar":
-    st.sidebar.write("Actualiza datos existentes:")
-    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=0, step=1)
-    update_data_json = st.sidebar.text_area("Nuevos datos en formato JSON")
+def update_row(table_name, fields):
+    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=1, step=1)
+    data = {field: st.sidebar.text_input(f"Nuevo valor para {field}") for field in fields}
     if st.sidebar.button("Actualizar"):
         try:
-            update_data(crud_options, record_id, eval(update_data_json))
+            update_data(table_name, record_id, {k: v for k, v in data.items() if v})
         except Exception as e:
-            st.error(f"Error en los datos proporcionados: {e}")
+            st.error(f"Error al actualizar datos: {e}")
 
-elif crud_action == "Eliminar":
-    st.sidebar.write("Elimina un registro existente:")
-    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=0, step=1)
+def delete_row(table_name):
+    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=1, step=1)
     if st.sidebar.button("Eliminar"):
-        delete_data(crud_options, record_id)
+        delete_data(table_name, record_id)
 
-# Volver a cargar datos después de CRUD
+def insert_data(table_name, data):
+    response = supabase.table(table_name).insert(data).execute()
+    if response.error:
+        st.error(f"Error al insertar datos en {table_name}: {response.error}")
+    else:
+        st.success(f"Datos insertados correctamente en {table_name}.")
+
+def update_data(table_name, id_value, data):
+    response = supabase.table(table_name).update(data).eq("id", id_value).execute()
+    if response.error:
+        st.error(f"Error al actualizar datos en {table_name}: {response.error}")
+    else:
+        st.success(f"Datos actualizados correctamente en {table_name}.")
+
+def delete_data(table_name, id_value):
+    response = supabase.table(table_name).delete().eq("id", id_value).execute()
+    if response.error:
+        st.error(f"Error al eliminar datos en {table_name}: {response.error}")
+    else:
+        st.success(f"Datos eliminados correctamente.")
+
+# CRUD en la barra lateral
+st.sidebar.title("CRUD")
+selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
+crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
+
+data = get_table_data(selected_table)
+fields = list(data.columns) if not data.empty else []
+
+if crud_action == "Crear":
+    insert_row(selected_table, fields)
+elif crud_action == "Actualizar":
+    update_row(selected_table, fields)
+elif crud_action == "Eliminar":
+    delete_row(selected_table)
+
+st.write(f"Datos actuales en la tabla `{selected_table}`:")
+st.dataframe(data)
+
+# Modelo predictivo con red neuronal
 data = get_table_data("articulo")
-
-# Procesar datos para modelo predictivo
 if not data.empty:
     try:
         data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
@@ -116,16 +106,16 @@ if not data.empty:
         X = datos_modelo[['anio_publicacion']]
         y = datos_modelo['cantidad_articulos']
 
-        # Normalizar datos
+        # Normalización
         X_normalized = (X - X.min()) / (X.max() - X.min())
         y_normalized = (y - y.min()) / (y.max() - y.min())
 
         X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
 
-        # Crear y entrenar red neuronal
+        # Modelo
         modelo_nn = Sequential([
-            Dense(10, activation='relu', input_dim=1),
-            Dense(10, activation='relu'),
+            Dense(5, activation='relu', input_dim=1),
+            Dense(5, activation='relu'),
             Dense(1, activation='linear')
         ])
         modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
@@ -134,48 +124,31 @@ if not data.empty:
         # Predicción
         y_pred_test = modelo_nn.predict(X_test)
         mse_nn = mean_squared_error(y_test, y_pred_test)
-        st.write(f"Error cuadrático medio del modelo: {mse_nn:.4f}")
+        st.write(f"Error cuadrático medio: {mse_nn:.4f}")
 
-        # Gráficos
         datos_modelo['prediccion'] = modelo_nn.predict(X_normalized) * (y.max() - y.min()) + y.min()
         st.write("Tabla con predicciones:")
         st.dataframe(datos_modelo)
 
-        st.write("Gráfico de barras:")
-        fig = px.bar(
-            datos_modelo,
-            x="anio_publicacion",
-            y=["cantidad_articulos", "prediccion"],
-            title="Artículos Publicados y Predicción",
-            labels={"value": "Cantidad de Artículos", "variable": "Tipo"},
-            barmode="group"
-        )
-        st.plotly_chart(fig)
-    except Exception as e:
-        st.error(f"Error en el modelo predictivo: {e}")
-
-    # Red neuronal con valores
-    try:
-        st.subheader("Visualización de Red Neuronal con Valores")
-
+        # Visualización de red neuronal
+        st.subheader("Red Neuronal con Valores")
         nn_graph = Digraph(format="png")
         nn_graph.attr(rankdir="LR")
 
-        nn_graph.node("Input", "Año de Publicación", shape="circle", style="filled", color="lightblue")
-        for i in range(1, 11):
-            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}", shape="circle", style="filled", color="lightgreen")
-        for i in range(1, 11):
-            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}", shape="circle", style="filled", color="lightgreen")
-        nn_graph.node("Output", "Cantidad Predicha", shape="circle", style="filled", color="orange")
+        nn_graph.node("Input", f"Año [{X.mean().values[0]:.2f}]", shape="circle", style="filled", color="lightblue")
+        for i in range(1, 6):
+            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i} [{modelo_nn.get_weights()[0][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
+        for i in range(1, 6):
+            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i} [{modelo_nn.get_weights()[2][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
+        nn_graph.node("Output", f"Predicción [{datos_modelo['prediccion'].mean():.2f}]", shape="circle", style="filled", color="orange")
 
-        for i in range(1, 11):
-            nn_graph.edge("Input", f"Hidden1_{i}")
-        for i in range(1, 11):
-            for j in range(1, 11):
+        nn_graph.edge("Input", "Hidden1_1")
+        for i in range(1, 6):
+            for j in range(1, 6):
                 nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
-        for i in range(1, 11):
+        for i in range(1, 6):
             nn_graph.edge(f"Hidden2_{i}", "Output")
 
         st.graphviz_chart(nn_graph)
     except Exception as e:
-        st.error(f"Error al generar el gráfico de la red neuronal: {e}")
+        st.error(f"Error en el modelo: {e}")
