@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 
-# Configurar Supabase
+# Configuración Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
@@ -16,47 +16,56 @@ try:
 except Exception as e:
     st.error(f"Error al conectar con Supabase: {e}")
 
-# Funciones para interactuar con la base de datos
+# Función para obtener datos de la tabla
 def get_table_data(table_name):
-    """Obtiene todos los datos de una tabla."""
+    """Obtiene todos los datos de una tabla desde Supabase."""
     try:
         response = supabase.table(table_name).select("*").execute()
         if response.data:
             return pd.DataFrame(response.data)
         else:
-            st.error(f"No se encontraron datos en la tabla {table_name}.")
+            st.warning(f"La tabla {table_name} está vacía.")
             return pd.DataFrame()
     except Exception as e:
         st.error(f"Error al consultar la tabla {table_name}: {e}")
         return pd.DataFrame()
 
-# Cargar los datos de las tablas
+# Obtener datos de las tablas
 articulos = get_table_data("articulo")
 estudiantes = get_table_data("estudiante")
 instituciones = get_table_data("institucion")
 indizaciones = get_table_data("indizacion")
 
-# Validar si las tablas tienen datos
-if not articulos.empty and not estudiantes.empty:
-    # Agregar relaciones entre tablas
-    articulos = articulos.merge(estudiantes, left_on="estudiante_id", right_on="id", suffixes=("", "_estudiante"))
-    articulos = articulos.merge(instituciones, left_on="institucion_id", right_on="id", suffixes=("", "_institucion"))
-    articulos = articulos.merge(indizaciones, left_on="indizacion_id", right_on="id", suffixes=("", "_indizacion"))
+# Validar datos antes de procesar
+if articulos.empty:
+    st.error("No hay datos en la tabla 'articulo'. Verifica tu base de datos.")
+else:
+    # Procesar relaciones entre tablas
+    try:
+        articulos = articulos.merge(estudiantes, left_on="estudiante_id", right_on="id", suffixes=("", "_estudiante"))
+        articulos = articulos.merge(instituciones, left_on="institucion_id", right_on="id", suffixes=("", "_institucion"))
+        articulos = articulos.merge(indizaciones, left_on="indizacion_id", right_on="id", suffixes=("", "_indizacion"))
+    except KeyError as e:
+        st.error(f"Error al unir tablas: {e}")
+        st.stop()
 
-    # Procesar y mostrar datos
-    articulos['anio_publicacion'] = pd.to_numeric(articulos['anio_publicacion'], errors="coerce")
+    # Procesar los datos
+    try:
+        articulos['anio_publicacion'] = pd.to_numeric(articulos['anio_publicacion'], errors="coerce")
+        datos_modelo = articulos.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+        
+        # Verificar datos procesados
+        if datos_modelo.empty:
+            st.error("No hay datos suficientes para generar el gráfico.")
+            st.stop()
+    except Exception as e:
+        st.error(f"Error al procesar los datos: {e}")
+        st.stop()
 
     # Modelo predictivo
-    def modelo_predictivo(articulos):
-        datos_modelo = (
-            articulos.groupby(['anio_publicacion'])
-            .size()
-            .reset_index(name='cantidad_articulos')
-        )
-
+    try:
         X = datos_modelo[['anio_publicacion']]
         y = datos_modelo['cantidad_articulos']
-
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         modelo = LinearRegression()
@@ -65,26 +74,25 @@ if not articulos.empty and not estudiantes.empty:
         y_pred = modelo.predict(X_test)
         mse = mean_squared_error(y_test, y_pred)
 
-        return modelo, mse
+        proximo_anio = articulos['anio_publicacion'].max() + 1
+        prediccion = modelo.predict([[proximo_anio]])
 
-    modelo, mse = modelo_predictivo(articulos)
-    proximo_anio = articulos['anio_publicacion'].max() + 1
-    prediccion = modelo.predict([[proximo_anio]])
+        st.write(f"Error cuadrático medio del modelo: {mse:.2f}")
+        st.write(f"Predicción para el año {proximo_anio}: {int(prediccion[0])}")
+    except Exception as e:
+        st.error(f"Error en el modelo predictivo: {e}")
+        st.stop()
 
-    # Interfaz Streamlit
-    st.title("Gestión de Artículos y Predicción")
-    st.write(f"Error cuadrático medio del modelo: {mse:.2f}")
-    st.write(f"Predicción de artículos para {proximo_anio}: {int(prediccion[0])}")
-
-    # Gráficos
-    fig = px.bar(
-        articulos,
-        x="anio_publicacion",
-        y=articulos.groupby('anio_publicacion').size(),
-        labels={"y": "Cantidad de Artículos", "anio_publicacion": "Año"},
-        title="Artículos Publicados por Año"
-    )
-    st.plotly_chart(fig)
-
-else:
-    st.error("Los datos de artículos o estudiantes no están disponibles. Revisa la base de datos.")
+    # Graficar
+    try:
+        st.write("Datos procesados para el gráfico:", datos_modelo)  # Mostrar datos procesados
+        fig = px.bar(
+            datos_modelo,
+            x="anio_publicacion",
+            y="cantidad_articulos",
+            title="Artículos Publicados por Año",
+            labels={"anio_publicacion": "Año de Publicación", "cantidad_articulos": "Cantidad de Artículos"}
+        )
+        st.plotly_chart(fig)
+    except ValueError as e:
+        st.error(f"Error al generar el gráfico: {e}")
