@@ -3,16 +3,18 @@ import pandas as pd
 import plotly.express as px
 from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from graphviz import Digraph  # Importar Graphviz para graficar la red neuronal
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 
 # Configuración Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("Modelo de predictivo (Streamlit, Supabase, GitHub y Python)")
+st.title("Modelo de predicción con Red Neuronal")
 
 # Crear cliente Supabase
 try:
@@ -66,67 +68,55 @@ else:
         st.error(f"Error al procesar los datos: {e}")
         st.stop()
 
-    # Modelo predictivo
+    # Modelo de red neuronal
     try:
         X = datos_modelo[['anio_publicacion']]
         y = datos_modelo['cantidad_articulos']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        modelo = LinearRegression()
-        modelo.fit(X_train, y_train)
+        # Normalizar datos para la red neuronal
+        X_normalized = (X - X.min()) / (X.max() - X.min())
+        y_normalized = (y - y.min()) / (y.max() - y.min())
 
-        y_pred = modelo.predict(X_test)
-        mse = mean_squared_error(y_test, y_pred)
+        X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
 
-        proximo_anio = articulos['anio_publicacion'].max() + 1
-        prediccion = modelo.predict([[proximo_anio]])
+        # Crear modelo de red neuronal
+        modelo_nn = Sequential([
+            Dense(10, activation='relu', input_dim=1),  # Capa de entrada y oculta
+            Dense(10, activation='relu'),  # Segunda capa oculta
+            Dense(1, activation='linear')  # Capa de salida
+        ])
 
-        st.write(f"Error cuadrático medio del modelo: {mse:.2f}")
-        st.write(f"Predicción para el año {proximo_anio}: {int(prediccion[0])}")
+        modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
+        modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)  # Entrenar modelo
+
+        # Predicción
+        y_pred_train = modelo_nn.predict(X_train)
+        y_pred_test = modelo_nn.predict(X_test)
+
+        # Error del modelo
+        mse_nn = mean_squared_error(y_test, y_pred_test)
+        st.write(f"Error cuadrático medio del modelo (Red Neuronal): {mse_nn:.4f}")
+
+        # Predicción para el próximo año
+        proximo_anio = (articulos['anio_publicacion'].max() + 1 - X.min()) / (X.max() - X.min())  # Normalizar el próximo año
+        prediccion_nn = modelo_nn.predict([[proximo_anio]]) * (y.max() - y.min()) + y.min()  # Desnormalizar
+        st.write(f"Predicción para el año {articulos['anio_publicacion'].max() + 1}: {int(prediccion_nn[0][0])}")
     except Exception as e:
-        st.error(f"Error en el modelo predictivo: {e}")
+        st.error(f"Error en el modelo predictivo de red neuronal: {e}")
         st.stop()
 
     # Graficar
     try:
-        st.write("Datos procesados para el gráfico:", datos_modelo)  # Mostrar datos procesados
-        fig = px.bar(
+        st.write("Datos originales y predicciones")
+        datos_modelo['prediccion'] = modelo_nn.predict(X_normalized) * (y.max() - y.min()) + y.min()
+        fig = px.scatter(
             datos_modelo,
             x="anio_publicacion",
-            y="cantidad_articulos",
-            title="Artículos Publicados por Año",
-            labels={"anio_publicacion": "Año de Publicación", "cantidad_articulos": "Cantidad de Artículos"}
+            y=["cantidad_articulos", "prediccion"],
+            title="Valores reales y predicción de la red neuronal",
+            labels={"value": "Cantidad de Artículos", "variable": "Tipo"},
+            color_discrete_map={"cantidad_articulos": "blue", "prediccion": "red"}
         )
         st.plotly_chart(fig)
     except ValueError as e:
         st.error(f"Error al generar el gráfico: {e}")
-
-    # Gráfico de la red neuronal
-    try:
-        st.subheader("Visualización de Red Neuronal")
-
-        nn_graph = Digraph(format="png")
-        nn_graph.attr(rankdir="LR")
-
-        # Capas de entrada
-        for i in range(1, X.shape[1] + 1):
-            nn_graph.node(f"Input_{i}", f"Entrada {i}", shape="circle", style="filled", color="lightblue")
-
-        # Capas ocultas (ejemplo con 3 neuronas)
-        for i in range(1, 4):
-            nn_graph.node(f"Hidden_{i}", f"Oculta {i}", shape="circle", style="filled", color="lightgreen")
-
-        # Capa de salida
-        nn_graph.node("Output", "Salida", shape="circle", style="filled", color="orange")
-
-        # Conexiones
-        for i in range(1, X.shape[1] + 1):
-            for j in range(1, 4):
-                nn_graph.edge(f"Input_{i}", f"Hidden_{j}")
-
-        for i in range(1, 4):
-            nn_graph.edge(f"Hidden_{i}", "Output")
-
-        st.graphviz_chart(nn_graph)
-    except Exception as e:
-        st.error(f"Error al generar el gráfico de la red neuronal: {e}")
