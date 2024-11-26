@@ -105,18 +105,54 @@ else:
         st.error(f"Error en el modelo predictivo de red neuronal: {e}")
         st.stop()
 
-    # Graficar
+    # Mostrar datos y predicciones
+    datos_modelo['prediccion'] = modelo_nn.predict(X_normalized) * (y.max() - y.min()) + y.min()
+    st.write("Tabla de valores originales y predicciones:")
+    st.dataframe(datos_modelo)
+
+    # Graficar barras
     try:
-        st.write("Datos originales y predicciones")
-        datos_modelo['prediccion'] = modelo_nn.predict(X_normalized) * (y.max() - y.min()) + y.min()
-        fig = px.scatter(
+        st.write("Gráfico de barras:")
+        fig = px.bar(
             datos_modelo,
             x="anio_publicacion",
             y=["cantidad_articulos", "prediccion"],
-            title="Valores reales y predicción de la red neuronal",
+            title="Artículos Publicados y Predicción por Año",
             labels={"value": "Cantidad de Artículos", "variable": "Tipo"},
-            color_discrete_map={"cantidad_articulos": "blue", "prediccion": "red"}
+            barmode="group"
         )
         st.plotly_chart(fig)
     except ValueError as e:
         st.error(f"Error al generar el gráfico: {e}")
+
+    # Graficar la red neuronal
+    try:
+        st.subheader("Visualización de Red Neuronal")
+
+        nn_graph = Digraph(format="png")
+        nn_graph.attr(rankdir="LR")
+
+        # Capas de entrada
+        nn_graph.node("Input", "Año Normalizado", shape="circle", style="filled", color="lightblue")
+
+        # Capas ocultas (ejemplo con 2 capas y 10 neuronas cada una)
+        for i in range(1, 11):
+            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}", shape="circle", style="filled", color="lightgreen")
+        for i in range(1, 11):
+            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}", shape="circle", style="filled", color="lightgreen")
+
+        # Capa de salida
+        nn_graph.node("Output", "Predicción", shape="circle", style="filled", color="orange")
+
+        # Conexiones
+        for i in range(1, 11):
+            nn_graph.edge("Input", f"Hidden1_{i}")
+        for i in range(1, 11):
+            for j in range(1, 11):
+                nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
+        for i in range(1, 11):
+            nn_graph.edge(f"Hidden2_{i}", "Output")
+
+        st.graphviz_chart(nn_graph)
+    except Exception as e:
+        st.error(f"Error al generar el gráfico de la red neuronal: {e}")
