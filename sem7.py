@@ -9,7 +9,7 @@ from graphviz import Digraph
 
 # Configuración Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
 st.image("log_ic-removebg-preview.png", width=200)
 st.title("Modelo Predictivo Basado en Artículos, Estudiantes, Indización e Instituciones")
