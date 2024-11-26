@@ -4,7 +4,7 @@ import plotly.express as px
 from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-from graphviz import Digraph  # Importar Graphviz para graficar la red neuronal
+from graphviz import Digraph
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
@@ -14,7 +14,7 @@ SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("Modelo de predicción con Red Neuronal")
+st.title("CRUD y Modelo Predictivo con Red Neuronal")
 
 # Crear cliente Supabase
 try:
@@ -22,9 +22,8 @@ try:
 except Exception as e:
     st.error(f"Error al conectar con Supabase: {e}")
 
-# Función para obtener datos de la tabla
+# Función para obtener datos de una tabla
 def get_table_data(table_name):
-    """Obtiene todos los datos de una tabla desde Supabase."""
     try:
         response = supabase.table(table_name).select("*").execute()
         if response.data:
@@ -36,115 +35,139 @@ def get_table_data(table_name):
         st.error(f"Error al consultar la tabla {table_name}: {e}")
         return pd.DataFrame()
 
-# Obtener datos de las tablas
-articulos = get_table_data("articulo")
-estudiantes = get_table_data("estudiante")
-instituciones = get_table_data("institucion")
-indizaciones = get_table_data("indizacion")
-
-# Validar datos antes de procesar
-if articulos.empty:
-    st.error("No hay datos en la tabla 'articulo'. Verifica tu base de datos.")
-else:
-    # Procesar relaciones entre tablas
+# Función para insertar datos en una tabla
+def insert_data(table_name, data):
     try:
-        articulos = articulos.merge(estudiantes, left_on="estudiante_id", right_on="id", suffixes=("", "_estudiante"))
-        articulos = articulos.merge(instituciones, left_on="institucion_id", right_on="id", suffixes=("", "_institucion"))
-        articulos = articulos.merge(indizaciones, left_on="indizacion_id", right_on="id", suffixes=("", "_indizacion"))
-    except KeyError as e:
-        st.error(f"Error al unir tablas: {e}")
-        st.stop()
-
-    # Procesar los datos
-    try:
-        articulos['anio_publicacion'] = pd.to_numeric(articulos['anio_publicacion'], errors="coerce")
-        datos_modelo = articulos.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
-        
-        # Verificar datos procesados
-        if datos_modelo.empty:
-            st.error("No hay datos suficientes para generar el gráfico.")
-            st.stop()
+        response = supabase.table(table_name).insert(data).execute()
+        if response.error:
+            st.error(f"Error al insertar datos en {table_name}: {response.error}")
+        else:
+            st.success(f"Datos insertados correctamente en {table_name}.")
     except Exception as e:
-        st.error(f"Error al procesar los datos: {e}")
-        st.stop()
+        st.error(f"Error al insertar datos: {e}")
 
-    # Modelo de red neuronal
+# Función para actualizar datos en una tabla
+def update_data(table_name, id_value, data):
     try:
+        response = supabase.table(table_name).update(data).eq("id", id_value).execute()
+        if response.error:
+            st.error(f"Error al actualizar datos en {table_name}: {response.error}")
+        else:
+            st.success(f"Datos actualizados correctamente en {table_name}.")
+    except Exception as e:
+        st.error(f"Error al actualizar datos: {e}")
+
+# Función para eliminar datos de una tabla
+def delete_data(table_name, id_value):
+    try:
+        response = supabase.table(table_name).delete().eq("id", id_value).execute()
+        if response.error:
+            st.error(f"Error al eliminar datos en {table_name}: {response.error}")
+        else:
+            st.success(f"Datos eliminados correctamente de {table_name}.")
+    except Exception as e:
+        st.error(f"Error al eliminar datos: {e}")
+
+# CRUD para cada tabla
+st.sidebar.title("Operaciones CRUD")
+crud_options = st.sidebar.selectbox("Selecciona una tabla para realizar CRUD", ["articulo", "estudiante", "institucion", "indizacion"])
+
+# Leer y mostrar datos
+data = get_table_data(crud_options)
+st.write(f"Datos actuales en la tabla `{crud_options}`:")
+st.dataframe(data)
+
+# Opciones de CRUD
+crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
+
+if crud_action == "Crear":
+    st.sidebar.write("Inserta nuevos datos:")
+    new_data = st.sidebar.text_area("Datos en formato JSON")
+    if st.sidebar.button("Insertar"):
+        try:
+            insert_data(crud_options, eval(new_data))  # Convertir texto en diccionario
+        except Exception as e:
+            st.error(f"Error en los datos proporcionados: {e}")
+
+elif crud_action == "Actualizar":
+    st.sidebar.write("Actualiza datos existentes:")
+    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=0, step=1)
+    update_data_json = st.sidebar.text_area("Nuevos datos en formato JSON")
+    if st.sidebar.button("Actualizar"):
+        try:
+            update_data(crud_options, record_id, eval(update_data_json))
+        except Exception as e:
+            st.error(f"Error en los datos proporcionados: {e}")
+
+elif crud_action == "Eliminar":
+    st.sidebar.write("Elimina un registro existente:")
+    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=0, step=1)
+    if st.sidebar.button("Eliminar"):
+        delete_data(crud_options, record_id)
+
+# Volver a cargar datos después de CRUD
+data = get_table_data("articulo")
+
+# Procesar datos para modelo predictivo
+if not data.empty:
+    try:
+        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
+        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
         X = datos_modelo[['anio_publicacion']]
         y = datos_modelo['cantidad_articulos']
 
-        # Normalizar datos para la red neuronal
+        # Normalizar datos
         X_normalized = (X - X.min()) / (X.max() - X.min())
         y_normalized = (y - y.min()) / (y.max() - y.min())
 
         X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
 
-        # Crear modelo de red neuronal
+        # Crear y entrenar red neuronal
         modelo_nn = Sequential([
-            Dense(10, activation='relu', input_dim=1),  # Capa de entrada y oculta
-            Dense(10, activation='relu'),  # Segunda capa oculta
-            Dense(1, activation='linear')  # Capa de salida
+            Dense(10, activation='relu', input_dim=1),
+            Dense(10, activation='relu'),
+            Dense(1, activation='linear')
         ])
-
         modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
-        modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)  # Entrenar modelo
+        modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)
 
         # Predicción
-        y_pred_train = modelo_nn.predict(X_train)
         y_pred_test = modelo_nn.predict(X_test)
-
-        # Error del modelo
         mse_nn = mean_squared_error(y_test, y_pred_test)
-        st.write(f"Error cuadrático medio del modelo (Red Neuronal): {mse_nn:.4f}")
+        st.write(f"Error cuadrático medio del modelo: {mse_nn:.4f}")
 
-        # Predicción para el próximo año
-        proximo_anio = (articulos['anio_publicacion'].max() + 1 - X.min()) / (X.max() - X.min())  # Normalizar el próximo año
-        prediccion_nn = modelo_nn.predict([[proximo_anio]]) * (y.max() - y.min()) + y.min()  # Desnormalizar
-        st.write(f"Predicción para el año {articulos['anio_publicacion'].max() + 1}: {int(prediccion_nn[0][0])}")
-    except Exception as e:
-        st.error(f"Error en el modelo predictivo de red neuronal: {e}")
-        st.stop()
+        # Gráficos
+        datos_modelo['prediccion'] = modelo_nn.predict(X_normalized) * (y.max() - y.min()) + y.min()
+        st.write("Tabla con predicciones:")
+        st.dataframe(datos_modelo)
 
-    # Mostrar datos y predicciones
-    datos_modelo['prediccion'] = modelo_nn.predict(X_normalized) * (y.max() - y.min()) + y.min()
-    st.write("Tabla de valores originales y predicciones:")
-    st.dataframe(datos_modelo)
-
-    # Graficar barras
-    try:
         st.write("Gráfico de barras:")
         fig = px.bar(
             datos_modelo,
             x="anio_publicacion",
             y=["cantidad_articulos", "prediccion"],
-            title="Artículos Publicados y Predicción por Año",
+            title="Artículos Publicados y Predicción",
             labels={"value": "Cantidad de Artículos", "variable": "Tipo"},
             barmode="group"
         )
         st.plotly_chart(fig)
-    except ValueError as e:
-        st.error(f"Error al generar el gráfico: {e}")
+    except Exception as e:
+        st.error(f"Error en el modelo predictivo: {e}")
 
-    # Graficar la red neuronal con valores
+    # Red neuronal con valores
     try:
         st.subheader("Visualización de Red Neuronal con Valores")
 
         nn_graph = Digraph(format="png")
         nn_graph.attr(rankdir="LR")
 
-        # Capas de entrada con valores
-        nn_graph.node("Input", f"Entrada\n{X_train.iloc[0, 0]:.2f}", shape="circle", style="filled", color="lightblue")
-
-        # Capas ocultas (ejemplo con 2 capas y 10 neuronas cada una)
+        nn_graph.node("Input", "Año de Publicación", shape="circle", style="filled", color="lightblue")
         for i in range(1, 11):
-            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}\nValor", shape="circle", style="filled", color="lightgreen")
+            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i}", shape="circle", style="filled", color="lightgreen")
         for i in range(1, 11):
-            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}\nValor", shape="circle", style="filled", color="lightgreen")
+            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i}", shape="circle", style="filled", color="lightgreen")
+        nn_graph.node("Output", "Cantidad Predicha", shape="circle", style="filled", color="orange")
 
-        # Capa de salida con valor
-        nn_graph.node("Output", f"Predicción\n{y_pred_test[0][0]:.2f}", shape="circle", style="filled", color="orange")
-
-        # Conexiones
         for i in range(1, 11):
             nn_graph.edge("Input", f"Hidden1_{i}")
         for i in range(1, 11):
