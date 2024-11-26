@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
@@ -78,14 +78,15 @@ st.title("Gestión de Artículos y Predicción")
 st.write(f"Error cuadrático medio del modelo: {mse:.2f}")
 st.write(f"Predicción de artículos para {proximo_anio}: {int(prediccion[0])}")
 
-# Mostrar los datos en un gráfico usando Matplotlib
-fig, ax = plt.subplots()
-articulos_por_anio = articulos.groupby('anio_publicacion').size()
-ax.bar(articulos_por_anio.index, articulos_por_anio.values, color='skyblue')
-ax.set_title("Artículos Publicados por Año")
-ax.set_xlabel("Año")
-ax.set_ylabel("Cantidad de Artículos")
-st.pyplot(fig)
+# Mostrar los datos en un gráfico
+fig = px.bar(
+    articulos,
+    x="anio_publicacion",
+    y=articulos.groupby('anio_publicacion').size(),
+    labels={"y": "Cantidad de Artículos", "anio_publicacion": "Año"},
+    title="Artículos Publicados por Año"
+)
+st.plotly_chart(fig)
 
 # CRUD
 menu = ["Ver Artículos", "Agregar Artículo", "Eliminar Artículo"]
