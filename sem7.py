@@ -31,10 +31,10 @@ def get_table_data(table_name):
         return pd.DataFrame()
 
 # Cargar los datos de las tablas
-articulos = get_table_data("Articulo")
-estudiantes = get_table_data("Estudiante")
-instituciones = get_table_data("Institucion")
-indizaciones = get_table_data("Indizacion")
+articulos = get_table_data("articulo")
+estudiantes = get_table_data("estudiante")
+instituciones = get_table_data("institucion")
+indizaciones = get_table_data("indizacion")
 
 # Validar si las tablas tienen datos
 if not articulos.empty and not estudiantes.empty:
