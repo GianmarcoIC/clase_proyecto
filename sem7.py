@@ -3,18 +3,16 @@ import pandas as pd
 import plotly.express as px
 from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from graphviz import Digraph
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
 
 # Configuración Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("CRUD y Modelo Predictivo Mejorado con Rango de Predicción")
+st.title("Modelo Predictivo Basado en Artículos, Estudiantes, Indización e Instituciones")
 
 # Crear cliente Supabase
 try:
@@ -22,10 +20,9 @@ try:
 except Exception as e:
     st.error(f"Error al conectar con Supabase: {e}")
 
-# Opción para predecir años
+# Configuración del rango de predicción
 st.sidebar.title("Configuración de Predicción")
-inicio_prediccion = st.sidebar.number_input("Año inicial de predicción", value=2024, step=1)
-fin_prediccion = st.sidebar.number_input("Año final de predicción", value=2026, step=1)
+rango_prediccion = st.sidebar.number_input("Rango de predicción (años)", min_value=1, value=3, step=1)
 
 # Función para obtener datos de una tabla
 def get_table_data(table_name):
@@ -40,125 +37,127 @@ def get_table_data(table_name):
         st.error(f"Error al consultar la tabla {table_name}: {e}")
         return pd.DataFrame()
 
-# Funciones CRUD
-def insert_row(table_name, fields):
-    data = {field: st.sidebar.text_input(f"Ingresar {field}") for field in fields if field != "id"}
-    if st.sidebar.button("Insertar"):
-        try:
-            insert_data(table_name, [data])
-        except Exception as e:
-            st.error(f"Error al insertar datos: {e}")
+# Datos principales
+articulos = get_table_data("articulo")
+estudiantes = get_table_data("estudiante")
+instituciones = get_table_data("institucion")
+indizaciones = get_table_data("indizacion")
 
-def update_row(table_name, fields):
-    record_id = st.sidebar.number_input("ID del registro a actualizar", min_value=1, step=1)
-    data = {field: st.sidebar.text_input(f"Nuevo valor para {field}") for field in fields if field != "id"}
-    if st.sidebar.button("Actualizar"):
-        try:
-            update_data(table_name, record_id, {k: v for k, v in data.items() if v})
-        except Exception as e:
-            st.error(f"Error al actualizar datos: {e}")
+if not articulos.empty and not estudiantes.empty and not instituciones.empty and not indizaciones.empty:
+    # Procesar datos
+    articulos['anio_publicacion'] = pd.to_numeric(articulos['anio_publicacion'], errors="coerce")
+    publicaciones_por_año = articulos.groupby('anio_publicacion').size().reset_index(name='publicaciones_totales')
 
-def delete_row(table_name):
-    record_id = st.sidebar.number_input("ID del registro a eliminar", min_value=1, step=1)
-    if st.sidebar.button("Eliminar"):
-        delete_data(table_name, record_id)
-
-def insert_data(table_name, data):
-    response = supabase.table(table_name).insert(data).execute()
-    if response.error:
-        st.error(f"Error al insertar datos en {table_name}: {response.error}")
-    else:
-        st.success(f"Datos insertados correctamente en {table_name}.")
-
-def update_data(table_name, id_value, data):
-    response = supabase.table(table_name).update(data).eq("id", id_value).execute()
-    if response.error:
-        st.error(f"Error al actualizar datos en {table_name}: {response.error}")
-    else:
-        st.success(f"Datos actualizados correctamente en {table_name}.")
-
-def delete_data(table_name, id_value):
-    response = supabase.table(table_name).delete().eq("id", id_value).execute()
-    if response.error:
-        st.error(f"Error al eliminar datos en {table_name}: {response.error}")
-    else:
-        st.success(f"Datos eliminados correctamente.")
-
-# CRUD en la barra lateral
-st.sidebar.title("CRUD")
-selected_table = st.sidebar.selectbox("Selecciona una tabla", ["articulo", "estudiante", "institucion", "indizacion"])
-crud_action = st.sidebar.radio("Acción CRUD", ["Crear", "Actualizar", "Eliminar"])
-
-data = get_table_data(selected_table)
-fields = list(data.columns) if not data.empty else []
-
-if crud_action == "Crear":
-    insert_row(selected_table, fields)
-elif crud_action == "Actualizar":
-    update_row(selected_table, fields)
-elif crud_action == "Eliminar":
-    delete_row(selected_table)
-
-st.write(f"Datos actuales en la tabla `{selected_table}`:")
-st.dataframe(data)
-
-# Modelo predictivo con red neuronal
-data = get_table_data("articulo")
-if not data.empty:
+    # Predicción de artículos
     try:
-        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
-        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
-        X = datos_modelo[['anio_publicacion']]
-        y = datos_modelo['cantidad_articulos']
+        X_articulos = publicaciones_por_año[['anio_publicacion']]
+        y_articulos = publicaciones_por_año['publicaciones_totales']
 
-        # Normalización
-        X_normalized = (X - X.min()) / (X.max() - X.min())
-        y_normalized = (y - y.min()) / (y.max() - y.min())
+        modelo_articulos = LinearRegression()
+        modelo_articulos.fit(X_articulos, y_articulos)
 
-        X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
+        años_prediccion = list(range(articulos['anio_publicacion'].max() + 1, articulos['anio_publicacion'].max() + 1 + rango_prediccion))
+        predicciones_articulos = modelo_articulos.predict(pd.DataFrame(años_prediccion, columns=['anio_publicacion']))
 
-        # Modelo
-        modelo_nn = Sequential([
-            Dense(5, activation='relu', input_dim=1),
-            Dense(5, activation='relu'),
-            Dense(1, activation='linear')
-        ])
-        modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
-        modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)
-
-        # Predicción
-        años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
-        años_normalizados = (pd.DataFrame(años_prediccion) - X.min().values[0]) / (X.max().values[0] - X.min().values[0])
-        predicciones = modelo_nn.predict(años_normalizados)
-
-        predicciones_desnormalizadas = predicciones * (y.max() - y.min()) + y.min()
-        predicciones_df = pd.DataFrame({
+        prediccion_articulos_df = pd.DataFrame({
             "Año": años_prediccion,
-            "Predicción": predicciones_desnormalizadas.flatten()
+            "Publicaciones Totales (Predicción)": predicciones_articulos
         })
-        st.write("Tabla de predicciones:")
-        st.dataframe(predicciones_df)
 
-        # Visualización de red neuronal
-        st.subheader("Red Neuronal con Valores")
-        nn_graph = Digraph(format="png")
-        nn_graph.attr(rankdir="LR")
+        st.write("Predicción de publicaciones totales:")
+        st.dataframe(prediccion_articulos_df)
 
-        nn_graph.node("Input", f"Año [{X.mean().values[0]:.2f}]", shape="circle", style="filled", color="lightblue")
-        for i in range(1, 6):
-            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i} [{modelo_nn.get_weights()[0][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
-        for i in range(1, 6):
-            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i} [{modelo_nn.get_weights()[2][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
-        nn_graph.node("Output", f"Predicción [{predicciones_df['Predicción'].mean():.2f}]", shape="circle", style="filled", color="orange")
-
-        nn_graph.edge("Input", "Hidden1_1")
-        for i in range(1, 6):
-            for j in range(1, 6):
-                nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
-        for i in range(1, 6):
-            nn_graph.edge(f"Hidden2_{i}", "Output")
-
-        st.graphviz_chart(nn_graph)
+        fig_articulos = px.bar(
+            prediccion_articulos_df,
+            x="Año",
+            y="Publicaciones Totales (Predicción)",
+            title="Predicción de Publicaciones por Año",
+            labels={"Año": "Año", "Publicaciones Totales (Predicción)": "Publicaciones Totales"}
+        )
+        st.plotly_chart(fig_articulos)
 
     except Exception as e:
-        st.error(f"Error en el modelo: {e}")
+        st.error(f"Error al predecir artículos: {e}")
+
+    # Predicción de indización
+    try:
+        indizaciones_por_año = articulos.merge(indizaciones, left_on="indizacion_id", right_on="id")
+        niveles = ["Q1", "Q2", "Q3", "Q4"]
+
+        predicciones_indizacion = {}
+        for nivel in niveles:
+            nivel_data = indizaciones_por_año[indizaciones_por_año['nivel'] == nivel].groupby('anio_publicacion').size()
+            nivel_data = nivel_data.reindex(range(articulos['anio_publicacion'].min(), articulos['anio_publicacion'].max() + 1), fill_value=0).reset_index()
+            nivel_data.columns = ['anio_publicacion', 'cantidad']
+            modelo_nivel = LinearRegression()
+            modelo_nivel.fit(nivel_data[['anio_publicacion']], nivel_data['cantidad'])
+            predicciones_indizacion[nivel] = modelo_nivel.predict(pd.DataFrame(años_prediccion, columns=['anio_publicacion']))
+
+        predicciones_indizacion_df = pd.DataFrame(predicciones_indizacion, index=años_prediccion)
+        predicciones_indizacion_df.index.name = "Año"
+        st.write("Predicción de Indización por Nivel:")
+        st.dataframe(predicciones_indizacion_df)
+
+        fig_indizaciones = px.line(
+            predicciones_indizacion_df,
+            title="Predicción de Publicaciones por Nivel de Indización",
+            labels={"value": "Cantidad", "variable": "Nivel"}
+        )
+        st.plotly_chart(fig_indizaciones)
+
+    except Exception as e:
+        st.error(f"Error al predecir indizaciones: {e}")
+
+    # Predicción de estudiantes
+    try:
+        estudiantes_por_año = articulos.groupby('anio_publicacion')['estudiante_id'].nunique().reset_index()
+        estudiantes_por_año.columns = ['anio_publicacion', 'estudiantes_unicos']
+
+        modelo_estudiantes = LinearRegression()
+        modelo_estudiantes.fit(estudiantes_por_año[['anio_publicacion']], estudiantes_por_año['estudiantes_unicos'])
+
+        predicciones_estudiantes = modelo_estudiantes.predict(pd.DataFrame(años_prediccion, columns=['anio_publicacion']))
+        prediccion_estudiantes_df = pd.DataFrame({
+            "Año": años_prediccion,
+            "Estudiantes Publicadores (Predicción)": predicciones_estudiantes
+        })
+
+        st.write("Predicción de estudiantes publicadores:")
+        st.dataframe(prediccion_estudiantes_df)
+
+        fig_estudiantes = px.line(
+            prediccion_estudiantes_df,
+            x="Año",
+            y="Estudiantes Publicadores (Predicción)",
+            title="Predicción de Estudiantes por Año",
+            labels={"Año": "Año", "Estudiantes Publicadores (Predicción)": "Cantidad"}
+        )
+        st.plotly_chart(fig_estudiantes)
+
+    except Exception as e:
+        st.error(f"Error al predecir estudiantes: {e}")
+
+    # Predicción de instituciones
+    try:
+        publicaciones_instituciones = articulos.merge(instituciones, left_on="institucion_id", right_on="id")
+        instituciones_predicciones = publicaciones_instituciones.groupby(['anio_publicacion', 'nombre']).size().reset_index(name='cantidad')
+
+        predicciones_instituciones_df = instituciones_predicciones.groupby('nombre').apply(
+            lambda grupo: grupo.set_index('anio_publicacion').reindex(range(articulos['anio_publicacion'].min(), articulos['anio_publicacion'].max() + 1), fill_value=0)
+        ).reset_index()
+
+        st.write("Predicción de publicaciones por institución:")
+        st.dataframe(predicciones_instituciones_df)
+
+        fig_instituciones = px.bar(
+            predicciones_instituciones_df,
+            x="anio_publicacion",
+            y="cantidad",
+            color="nombre",
+            title="Predicción por Institución",
+            labels={"anio_publicacion": "Año", "cantidad": "Cantidad de Publicaciones", "nombre": "Institución"}
+        )
+        st.plotly_chart(fig_instituciones)
+
+    except Exception as e:
+        st.error(f"Error al predecir instituciones: {e}")
