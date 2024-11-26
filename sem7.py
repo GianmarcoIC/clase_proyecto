@@ -5,6 +5,7 @@ from supabase import create_client, Client
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+from graphviz import Digraph  # Importar Graphviz para graficar la red neuronal
 
 # Configuración Supabase
 SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
@@ -99,3 +100,33 @@ else:
         st.plotly_chart(fig)
     except ValueError as e:
         st.error(f"Error al generar el gráfico: {e}")
+
+    # Gráfico de la red neuronal
+    try:
+        st.subheader("Visualización de Red Neuronal")
+
+        nn_graph = Digraph(format="png")
+        nn_graph.attr(rankdir="LR")
+
+        # Capas de entrada
+        for i in range(1, X.shape[1] + 1):
+            nn_graph.node(f"Input_{i}", f"Entrada {i}", shape="circle", style="filled", color="lightblue")
+
+        # Capas ocultas (ejemplo con 3 neuronas)
+        for i in range(1, 4):
+            nn_graph.node(f"Hidden_{i}", f"Oculta {i}", shape="circle", style="filled", color="lightgreen")
+
+        # Capa de salida
+        nn_graph.node("Output", "Salida", shape="circle", style="filled", color="orange")
+
+        # Conexiones
+        for i in range(1, X.shape[1] + 1):
+            for j in range(1, 4):
+                nn_graph.edge(f"Input_{i}", f"Hidden_{j}")
+
+        for i in range(1, 4):
+            nn_graph.edge(f"Hidden_{i}", "Output")
+
+        st.graphviz_chart(nn_graph)
+    except Exception as e:
+        st.error(f"Error al generar el gráfico de la red neuronal: {e}")
