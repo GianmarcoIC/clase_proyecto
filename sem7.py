@@ -193,3 +193,56 @@ if not data.empty:
 
     except Exception as e:
         st.error(f"Error al generar el gráfico de barras: {e}")
+
+
+# Modelo predictivo con Random Forest
+from sklearn.ensemble import RandomForestRegressor
+
+if not data.empty:
+    try:
+        # Datos para Random Forest
+        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
+        X = datos_modelo[['anio_publicacion']]
+        y = datos_modelo['cantidad_articulos']
+
+        # Dividir datos en entrenamiento y prueba
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Configurar y entrenar el modelo Random Forest
+        modelo_rf = RandomForestRegressor(n_estimators=100, random_state=42)
+        modelo_rf.fit(X_train, y_train)
+
+        # Predicciones para años en el rango
+        años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
+        predicciones_rf = modelo_rf.predict(pd.DataFrame(años_prediccion))
+
+        # Crear DataFrame para mostrar predicciones
+        predicciones_rf_df = pd.DataFrame({
+            "Año": años_prediccion,
+            "Predicción (RF)": predicciones_rf
+        })
+
+        st.write("Tabla de predicciones (Random Forest):")
+        st.dataframe(predicciones_rf_df)
+
+        # Gráfico de barras para Random Forest
+        st.subheader("Gráfico de Predicciones con Random Forest")
+        predicciones_rf_df["Tipo"] = "Predicción (RF)"
+        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
+        historico_df["Tipo"] = "Histórico"
+
+        grafico_rf_df = pd.concat([historico_df, predicciones_rf_df.rename(columns={"Predicción (RF)": "Cantidad de Artículos"})])
+
+        fig_rf = px.bar(
+            grafico_rf_df,
+            x="Año",
+            y="Cantidad de Artículos",
+            color="Tipo",
+            title="Publicaciones Históricas y Predicciones (Random Forest)",
+            labels={"Año": "Año", "Cantidad de Artículos": "Cantidad de Artículos", "Tipo": "Datos"},
+            barmode="group"
+        )
+        st.plotly_chart(fig_rf)
+
+    except Exception as e:
+        st.error(f"Error en el modelo Random Forest: {e}")
