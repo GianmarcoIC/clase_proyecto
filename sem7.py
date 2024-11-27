@@ -258,8 +258,8 @@ if not data.empty:
     try:
         # Datos para evaluación de fiabilidad
         y_test_desnormalizado = y_test * (y.max() - y.min()) + y.min()  # Desnormalizar para comparar
-        y_pred_nn_desnormalizado = modelo_nn.predict(X_test) * (y.max() - y.min()) + y.min()  # Predicciones Red Neuronal
-        y_pred_rf = modelo_rf.predict(X_test)  # Predicciones Random Forest
+        y_pred_nn_desnormalizado = modelo_nn.predict(X_test).flatten() * (y.max() - y.min()) + y.min()  # Predicciones Red Neuronal
+        y_pred_rf = modelo_rf.predict(X_test).flatten()  # Predicciones Random Forest
 
         # Métricas para Red Neuronal
         mse_nn = mean_squared_error(y_test_desnormalizado, y_pred_nn_desnormalizado)
@@ -298,6 +298,7 @@ if not data.empty:
 
     except Exception as e:
         st.error(f"Error al calcular métricas de fiabilidad: {e}")
+
 
 
 
