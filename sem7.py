@@ -141,7 +141,7 @@ if not data.empty:
             "Año": años_prediccion,
             "Predicción": predicciones_desnormalizadas.flatten()
         })
-        st.write("Tabla de predicciones:")
+        st.write("Tabla de predicciones Red Neuronal:")
         st.dataframe(predicciones_df)
 
         # Visualización de red neuronal
