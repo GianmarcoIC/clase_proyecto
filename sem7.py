@@ -14,7 +14,7 @@ SUPABASE_URL = "https://msjtvyvvcsnmoblkpjbz.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zanR2eXZ2Y3NubW9ibGtwamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzIwNTk2MDQsImV4cCI6MjA0NzYzNTYwNH0.QY1WtnONQ9mcXELSeG_60Z3HON9DxSZt31_o-JFej2k"
 
 st.image("log_ic-removebg-preview.png", width=200)
-st.title("Modelo Predictivo - Publicaciones Científicas")
+st.title("CRUD y Modelo Predictivo Mejorado con Rango de Predicción")
 
 # Crear cliente Supabase
 try:
@@ -150,84 +150,6 @@ if not data.empty:
         for i in range(1, 6):
             nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i} [{modelo_nn.get_weights()[2][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
         nn_graph.node("Output", f"Predicción [{predicciones_df['Predicción'].mean():.2f}]", shape="circle", style="filled", color="orange")
-
-        nn_graph.edge("Input", "Hidden1_1")
-        for i in range(1, 6):
-            for j in range(1, 6):
-                nn_graph.edge(f"Hidden1_{i}", f"Hidden2_{j}")
-        for i in range(1, 6):
-            nn_graph.edge(f"Hidden2_{i}", "Output")
-
-        st.graphviz_chart(nn_graph)
-
-    except Exception as e:
-        st.error(f"Error en el modelo: {e}")
-
-# Modelo predictivo con red neuronal y visualización
-data = get_table_data("articulo")
-if not data.empty:
-    try:
-        data['anio_publicacion'] = pd.to_numeric(data['anio_publicacion'], errors="coerce")
-        datos_modelo = data.groupby(['anio_publicacion']).size().reset_index(name='cantidad_articulos')
-        X = datos_modelo[['anio_publicacion']]
-        y = datos_modelo['cantidad_articulos']
-
-        # Normalización
-        X_normalized = (X - X.min()) / (X.max() - X.min())
-        y_normalized = (y - y.min()) / (y.max() - y.min())
-
-        X_train, X_test, y_train, y_test = train_test_split(X_normalized, y_normalized, test_size=0.2, random_state=42)
-
-        # Modelo
-        modelo_nn = Sequential([
-            Dense(5, activation='relu', input_dim=1),
-            Dense(5, activation='relu'),
-            Dense(1, activation='linear')
-        ])
-        modelo_nn.compile(optimizer='adam', loss='mean_squared_error')
-        modelo_nn.fit(X_train, y_train, epochs=100, verbose=0)
-
-        # Predicción
-        años_prediccion = list(range(inicio_prediccion, fin_prediccion + 1))
-        años_normalizados = (pd.DataFrame(años_prediccion) - X.min().values[0]) / (X.max().values[0] - X.min().values[0])
-        predicciones = modelo_nn.predict(años_normalizados)
-
-        predicciones_desnormalizadas = predicciones * (y.max() - y.min()) + y.min()
-        predicciones_df = pd.DataFrame({
-            "Año": años_prediccion,
-            "Predicción": predicciones_desnormalizadas.flatten()
-        })
-        st.write("Tabla de predicciones:")
-        st.dataframe(predicciones_df)
-
-        # Gráfico combinado: Histórico y predicciones
-        historico_df = datos_modelo.rename(columns={"anio_publicacion": "Año", "cantidad_articulos": "Cantidad de Artículos"})
-        historico_df["Tipo"] = "Histórico"
-        predicciones_df["Tipo"] = "Predicción"
-        grafico_df = pd.concat([historico_df, predicciones_df.rename(columns={"Predicción": "Cantidad de Artículos"})])
-
-        fig = px.bar(
-            grafico_df,
-            x="Año",
-            y="Cantidad de Artículos",
-            color="Tipo",
-            title="Publicaciones Históricas y Predicciones",
-            labels={"Año": "Año", "Cantidad de Artículos": "Cantidad de Artículos", "Tipo": "Datos"},
-            barmode="group"
-        )
-        st.plotly_chart(fig)
-
-        # Visualización de red neuronal
-        st.subheader("Red Neuronal con Valores")
-        nn_graph = Digraph(format="png")
-        nn_graph.attr(rankdir="LR")
-
-        nn_graph.node("Input", f"Año [{X.mean().values[0]:.2f}]", shape="circle", style="filled", color="lightblue")
-        for i in range(1, 6):
-            nn_graph.node(f"Hidden1_{i}", f"Oculta 1-{i} [{modelo_nn.get_weights()[0][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
-        for i in range(1, 6):
-            nn_graph.node(f"Hidden2_{i}", f"Oculta 2-{i} [{modelo_nn.get_weights()[2][0][i-1]:.2f}]", shape="circle", style="filled", color="lightgreen")
-        nn_graph.node("Output", f"Predicción [{predicciones_df['Cantidad de Artículos'].mean():.2f}]", shape="circle", style="filled", color="orange")
 
         nn_graph.edge("Input", "Hidden1_1")
         for i in range(1, 6):
