@@ -246,3 +246,37 @@ if not data.empty:
 
     except Exception as e:
         st.error(f"Error en el modelo Random Forest: {e}")
+
+
+
+# Modelo de confiablidad entre Red Neuronal y Ramdon Forest
+from sklearn.metrics import mean_squared_error, r2_score
+
+if not data.empty:
+    try:
+        # Datos para evaluar fiabilidad
+        y_test_desnormalizado = y_test * (y.max() - y.min()) + y.min()  # Desnormalizar para comparar
+        y_pred_nn_desnormalizado = modelo_nn.predict(X_test) * (y.max() - y.min()) + y.min()  # Predicciones Red Neuronal
+        y_pred_rf = modelo_rf.predict(X_test)  # Predicciones Random Forest
+
+        # Métricas para Red Neuronal
+        mse_nn = mean_squared_error(y_test_desnormalizado, y_pred_nn_desnormalizado)
+        r2_nn = r2_score(y_test_desnormalizado, y_pred_nn_desnormalizado)
+
+        # Métricas para Random Forest
+        mse_rf = mean_squared_error(y_test, y_pred_rf)
+        r2_rf = r2_score(y_test, y_pred_rf)
+
+        # Crear tabla de métricas
+        fiabilidad_df = pd.DataFrame({
+            "Modelo": ["Red Neuronal", "Random Forest"],
+            "Error Cuadrático Medio (MSE)": [mse_nn, mse_rf],
+            "Coeficiente de Determinación (R²)": [r2_nn, r2_rf]
+        })
+
+        st.write("### Tabla de Fiabilidad Estadística")
+        st.dataframe(fiabilidad_df)
+
+    except Exception as e:
+        st.error(f"Error al calcular métricas de fiabilidad: {e}")
+
