@@ -255,13 +255,20 @@ if not data.empty:
 
 
 # Modelo de confiablidad entre Red Neuronal y Ramdon Forest
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import numpy as np
+from scipy import stats
+import pandas as pd
+import streamlit as st
+
+# Modelo de confiablidad entre Red Neuronal y Random Forest
 if not data.empty:
     try:
         # Desnormalizar valores para Red Neuronal
         y_test_desnormalizado = y_test * (y.max() - y.min()) + y.min()  # Valores reales desnormalizados
         y_pred_nn_desnormalizado = modelo_nn.predict(X_test).flatten() * (y.max() - y.min()) + y.min()  # Predicciones desnormalizadas
 
-        # Predicciones de Random Forest
+        # Predicciones de Random Forest (sin normalización, ya que Random Forest no requiere normalización)
         y_pred_rf = modelo_rf.predict(X_test)  # Random Forest predice sin necesidad de normalización
 
         # Calcular métricas para Red Neuronal
