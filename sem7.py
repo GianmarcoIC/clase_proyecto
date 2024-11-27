@@ -250,18 +250,16 @@ if not data.empty:
 
 
 # Modelo de confiablidad entre Red Neuronal y Ramdon Forest
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-import numpy as np
-import scipy.stats as stats
-
 if not data.empty:
     try:
-        # Datos para evaluación de fiabilidad
-        y_test_desnormalizado = y_test * (y.max() - y.min()) + y.min()  # Desnormalizar para comparar
-        y_pred_nn_desnormalizado = modelo_nn.predict(X_test).flatten() * (y.max() - y.min()) + y.min()  # Predicciones Red Neuronal
-        y_pred_rf = modelo_rf.predict(X_test).flatten()  # Predicciones Random Forest
+        # Desnormalizar valores para Red Neuronal
+        y_test_desnormalizado = y_test * (y.max() - y.min()) + y.min()  # Valores reales desnormalizados
+        y_pred_nn_desnormalizado = modelo_nn.predict(X_test).flatten() * (y.max() - y.min()) + y.min()  # Predicciones desnormalizadas
 
-        # Métricas para Red Neuronal
+        # Predicciones de Random Forest
+        y_pred_rf = modelo_rf.predict(X_test)  # Random Forest predice sin necesidad de normalización
+
+        # Calcular métricas para Red Neuronal
         mse_nn = mean_squared_error(y_test_desnormalizado, y_pred_nn_desnormalizado)
         mae_nn = mean_absolute_error(y_test_desnormalizado, y_pred_nn_desnormalizado)
         mape_nn = np.mean(np.abs((y_test_desnormalizado - y_pred_nn_desnormalizado) / y_test_desnormalizado)) * 100
@@ -271,7 +269,7 @@ if not data.empty:
         nn_std_error = np.std(y_test_desnormalizado - y_pred_nn_desnormalizado) / np.sqrt(len(y_test_desnormalizado))
         nn_confidence_interval = stats.norm.interval(0.95, loc=np.mean(y_pred_nn_desnormalizado), scale=nn_std_error)
 
-        # Métricas para Random Forest
+        # Calcular métricas para Random Forest
         mse_rf = mean_squared_error(y_test, y_pred_rf)
         mae_rf = mean_absolute_error(y_test, y_pred_rf)
         mape_rf = np.mean(np.abs((y_test - y_pred_rf) / y_test)) * 100
@@ -288,8 +286,10 @@ if not data.empty:
             "Error Absoluto Medio (MAE)": [mae_nn, mae_rf],
             "Error Porcentual Medio Absoluto (MAPE)": [mape_nn, mape_rf],
             "Coeficiente de Determinación (R²)": [r2_nn, r2_rf],
-            "Intervalo de Confianza (95%)": [f"{nn_confidence_interval[0]:.2f} - {nn_confidence_interval[1]:.2f}",
-                                             f"{rf_confidence_interval[0]:.2f} - {rf_confidence_interval[1]:.2f}"],
+            "Intervalo de Confianza (95%)": [
+                f"{nn_confidence_interval[0]:.2f} - {nn_confidence_interval[1]:.2f}",
+                f"{rf_confidence_interval[0]:.2f} - {rf_confidence_interval[1]:.2f}"
+            ],
             "Margen de Error": [nn_std_error, rf_std_error]
         })
 
